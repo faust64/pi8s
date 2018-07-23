@@ -1,0 +1,6 @@
+ansible_user: root
+k8s_init_node: pandore.faust.intra.unetresgrossebite.com
+#stretch does not seem to provide with raspbian packages
+#whereas xenial does ...
+force_k8s_dist: xenial
+k8s_overlay_cidr: 10.128.0.0/12

@@ -1,0 +1,8 @@
+- include_tasks: keygen.yml
+- include_tasks: addhostkey.yml
+  loop_control:
+    loop_var: remote
+  with_items: "{{ groups['k8s'] }}"
+- include_tasks: exchangekeys.yml
+- include_tasks: dphys-swapfile.yml
+- include_tasks: libfix.yml

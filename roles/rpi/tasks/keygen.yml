@@ -1,0 +1,6 @@
+- name: ensure .ssh directory exists
+  file: dest=/root/.ssh state=directory owner=root group=root mode=0700
+- name: generate ssh keys
+  shell: ssh-keygen -t rsa -b 4096 -N '' -f id_rsa chdir=/root/.ssh creates=/root/.ssh/id_rsa
+- name: make sure we have a known hosts file
+  shell: touch known_hosts chdir=/root/.ssh creates=/root/.ssh/known_hosts
