@@ -60,3 +60,11 @@ Then, having booted Raspbian:
 ### Enable SSH
 
 [duh]
+
+## Special Thanks
+
+Special thanks to:
+
+ * Anne Fernandes
+ * Dimitris Finas
+ * Nicolas Fleury-Gobert
