@@ -6,3 +6,4 @@
 - include_tasks: exchangekeys.yml
 - include_tasks: dphys-swapfile.yml
 - include_tasks: libfix.yml
+- include_tasks: ntp.yml

@@ -1,0 +1,6 @@
+driftfile /var/lib/ntp/ntp.drift
+server {{ ntpd_upstream_server | default('pool.ntp.org') }}
+restrict -4 default kod notrap nomodify nopeer noquery
+restrict -6 default kod notrap nomodify nopeer noquery
+restrict 127.0.0.1
+restrict ::1
