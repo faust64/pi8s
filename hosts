@@ -2,3 +2,8 @@
 pandore.faust.intra.unetresgrossebite.com
 epimethee.faust.intra.unetresgrossebite.com
 pyrrha.faust.intra.unetresgrossebite.com
+
+[k8s:vars]
+docker_insecure_registries=[ 'docker-registry-default.router.intra.unetresgrossebite.com' ]
+#http_proxy=http://1.2.3.4:3128
+#no_proxy=[ '*.example.com', '10/8' ]
