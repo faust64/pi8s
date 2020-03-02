@@ -1,0 +1,10 @@
+Defaults:nrpe !requiretty
+{% if ansible_hostname in groups['masters'] or ansible_fqdn in groups['masters'] %}
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_etcd
+{% endif %}
+{% if do_fluentd | default(False) or do_logging | default(False) %}
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_fluentd
+{% endif %}
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_oom
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_persistent_volumes_usage
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_rogue_containers

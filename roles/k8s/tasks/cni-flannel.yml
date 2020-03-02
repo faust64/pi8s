@@ -1,0 +1,68 @@
+- name: Gets k8s version
+  args:
+    creates: /usr/src/flannel.yml
+  changed_when: False
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  register: k8s_version
+  run_once: True
+  shell: "kubectl version -o yaml | grep -A9 serverVersion: | awk '/minor/{print $2}' | sed 's|\"||g'"
+- name: Sets node_cidr facts
+  set_fact:
+    node_cidr: "{{ k8s_overlay_cidr | regex_replace('^([^/]*)0\\.0/.*$', '\\1') }}{{ flannel_node_cidr_ids[ansible_fqdn] }}.0/{{ flannel_node_cidr_length }}"
+  when:
+  - flannel_node_cidr_ids is defined
+  - flannel_node_cidr_ids[ansible_fqdn] is defined
+- name: Debugs node_cidr
+  debug:
+    msg: "{{ ansible_fqdn }} => {{ node_cidr | default('unassigned') }}"
+# arguably: fail nodes where cidr missing
+- name: Allocates podCIDR to initial master node
+  args:
+    creates: /usr/src/flannel.yml
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: True
+  shell: "kubectl patch node $(hostname) -p '{\"spec\": {\"podCIDR\": \"{{ node_cidr }}\"} }' --type merge"
+# wtf: did I miss something / shouldn't these be allocated automatically to nodes joining cluster?
+  when:
+  - flannel_node_cidr_ids is defined
+  - flannel_node_cidr_ids[k8s_init_node | default(groups['masters'][0])] is defined
+- block:
+  - name: Installs patched flannel network driver
+    copy:
+      dest: /usr/src/flannel.yml
+      force: no
+      group: root
+      mode: 0644
+      owner: root
+      src: "flannel-{{ flannel_version }}.yml"
+    register: flannel_custom
+    when:
+    - k8s_version.stdout_line[0] is match('17')
+    - flannel_version in [ 'v0.11.0' ]
+  - name: Downloads flannel network driver
+    delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+    run_once: True
+    register: flannel_fetched
+    get_url:
+      dest: /usr/src/flannel.yml
+      force: no
+      group: root
+      mode: 0644
+      owner: root
+      url: "https://raw.githubusercontent.com/coreos/flannel/{{ flannel_version }}/Documentation/kube-flannel.yml"
+    when:
+    - not (k8s_version.stdout_line[0] is match('17'))
+    - not (flannel_version in [ 'v0.11.0' ])
+# wtf: with flannel_version=v0.11.0, the above would install daemonsets loading images whose tag is 0.10.0
+  - name: Installs flannel network driver
+    args:
+      chdir: /usr/src
+    delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+    run_once: True
+    shell: kubectl apply -f flannel.yml
+    when: >
+      (flannel_fetched is defined and flannel_fetched is changed)
+      or (flannel_custom is defined and flannel_custom is changed)
+  when:
+  - k8s_version is defined
+  - k8s_version.stdout_line is defined

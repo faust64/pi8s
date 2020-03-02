@@ -1,0 +1,12 @@
+container_runtime: docker
+flannel_node_cidr_ids: []
+flannel_node_cidr_length: 24
+flannel_version: v0.11.0
+k8s_api_hostname: k8s-api.demo.local
+k8s_api_port: 6443
+k8s_cni: flannel
+k8s_init_token_ttl: 86400
+k8s_join_timeout: 130
+k8s_labels: []
+k8s_overlay_cidr: 10.32.0.0/12
+openssl_tmp_pass: secr3t

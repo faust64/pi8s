@@ -1,9 +1,25 @@
-[k8s]
-pandore.faust.intra.unetresgrossebite.com
-epimethee.faust.intra.unetresgrossebite.com
-pyrrha.faust.intra.unetresgrossebite.com
+[masters]
+calliope.friends.intra.unetresgrossebite.com
+clio.friends.intra.unetresgrossebite.com
+erato.friends.intra.unetresgrossebite.com
 
-[k8s:vars]
-docker_insecure_registries=[ 'docker-registry-default.router.intra.unetresgrossebite.com' ]
-#http_proxy=http://1.2.3.4:3128
-#no_proxy=[ '*.example.com', '10/8' ]
+[infra]
+pandore.friends.intra.unetresgrossebite.com
+epimethee.friends.intra.unetresgrossebite.com
+pyrrha.friends.intra.unetresgrossebite.com
+
+[workers]
+euterpe.friends.intra.unetresgrossebite.com
+melpomene.friends.intra.unetresgrossebite.com
+polyhymnia.friends.intra.unetresgrossebite.com
+terpsichore.friends.intra.unetresgrossebite.com
+thalia.friends.intra.unetresgrossebite.com
+urania.friends.intra.unetresgrossebite.com
+
+[lb]
+hellenes.friends.intra.unetresgrossebite.com
+
+[k8s:children]
+masters
+infra
+workers

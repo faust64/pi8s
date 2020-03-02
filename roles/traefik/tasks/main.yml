@@ -1,0 +1,6 @@
+- include_tasks: prep-assets.yml
+- include_tasks: prep-k8s.yml
+- include_tasks: tls.yml
+  when:
+  - traefik_use_letsencrypt == False
+- include_tasks: install.yml

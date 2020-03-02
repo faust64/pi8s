@@ -1,3 +1,6 @@
+- include_tasks: sysupdate.yml
+- include_tasks: cmdline.yml
+- include_tasks: gpumem.yml
 - include_tasks: keygen.yml
 - include_tasks: addhostkey.yml
   loop_control:
@@ -7,3 +10,6 @@
 - include_tasks: dphys-swapfile.yml
 - include_tasks: libfix.yml
 - include_tasks: ntp.yml
+- include_tasks: modules.yml
+- include_tasks: sysctl.yml
+- include_tasks: reboot.yml

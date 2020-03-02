@@ -1,0 +1,151 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: csi-rbdplugin-provisioner
+  namespace: {{ csi_namespace }}
+spec:
+  replicas: {{ groups['infra'] | length }}
+  selector:
+    matchLabels:
+      app: csi-rbdplugin-provisioner
+  template:
+    metadata:
+      labels:
+        app: csi-rbdplugin-provisioner
+    spec:
+      containers:
+      - args:
+        - "--csi-address=$(ADDRESS)"
+        - "--v=5"
+        - "--timeout=150s"
+        - "--retry-interval-start=500ms"
+        - "--enable-leader-election=true"
+        - "--leader-election-type=leases"
+        env:
+        - name: ADDRESS
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_provisioner_image }}:{{ csi_provisioner_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-provisioner
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--csi-address=$(ADDRESS)"
+        - "--v=5"
+        - "--timeout=150s"
+        - "leader-election=true"
+        env:
+        - name: ADDRESS
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_snapshotter_image }}:{{ csi_snapshotter_version }}
+        imagePullPolicy: Always
+        name: csi-snapshotter
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        - "--leader-election=true"
+        env:
+        - name: ADDRESS
+          value: /csi/csi-provisioner.sock
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        name: csi-attacher
+        image: {{ csi_attacher_image }}:{{ csi_attacher_version }}
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--nodeid=$(NODE_ID)"
+        - "--type=rbd"
+        - "--controllerserver=true"
+        - "--endpoint=$(CSI_ENDPOINT)"
+        - "--v=5"
+        - "--drivername=rbd.csi.ceph.com"
+        - "--pidlimit=-1"
+        - "--metricsport=8090"
+        - "--metricspath=/metrics"
+        - "--enablegrpcmetrics=false"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_ceph_image }}:{{ csi_ceph_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-rbdplugin
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+        - mountPath: /dev
+          name: host-dev
+        - mountPath: /sys
+          name: host-sys
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+        - name: ceph-csi-config
+          mountPath: /etc/ceph-csi-config/
+        - name: keys-tmp-dir
+          mountPath: /tmp/csi/keys
+      - args:
+        - "--type=liveness"
+        - "--endpoint=$(CSI_ENDPOINT)"
+        - "--metricsport=8680"
+        - "--metricspath=/metrics"
+        - "--polltime=60s"
+        - "--timeout=3s"
+        env:
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi-provisioner.sock
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        image: {{ csi_ceph_image }}:{{ csi_ceph_version }}
+        imagePullPolicy: IfNotPresent
+        name: liveness-prometheus
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      serviceAccount: rbd-csi-provisioner
+      volumes:
+      - name: host-dev
+        hostPath:
+          path: /dev
+      - name: host-sys
+        hostPath:
+          path: /sys
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: socket-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins/rbd.csi.ceph.com
+          type: DirectoryOrCreate
+      - name: ceph-csi-config
+        configMap:
+          name: ceph-csi-config
+      - name: keys-tmp-dir
+        emptyDir:
+          medium: Memory

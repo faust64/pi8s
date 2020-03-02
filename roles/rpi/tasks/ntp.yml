@@ -1,14 +1,28 @@
-- name: install ntpdate
-  apt: name=ntpdate state=present
+- name: Installs ntpdate
+  apt:
+    name: ntpdate
+    state: present
   register: ntp_init
-- name: ensure we'ld sync with upstream, even if skew too large for ntpd
+- name: Ensures we'ld sync with upstream, even if skew too large for ntpd
   shell: "ntpdate {{ ntpd_upstream_server | default('pool.ntp.org') }}"
-  when: ntp_init is defined and ntp_init.changed is defined and ntp_init.changed == True
-- name: install ntpd
-  apt: name=ntp state=present
-- name: configure ntpd upstream
+  when:
+  - ntp_init is defined
+  - ntp_init is changed
+- name: Installs ntpd
+  apt:
+    name: ntp
+    state: present
+- name: Configures ntpd upstream
   notify: Reload ntpd
-  template: src=ntp.j2 dest=/etc/ntp.conf owner=root group=root mode=0644
+  template:
+    dest: /etc/ntp.conf
+    group: root
+    mode: 0644
+    owner: root
+    src: ntp.j2
 - meta: flush_handlers
-- name: ensure ntpd starts on boot
-  service: name=ntp state=started enabled=yes
+- name: Ensures ntpd would start on boot
+  service:
+    enabled: yes
+    name: ntp
+    state: started

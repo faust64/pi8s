@@ -1,17 +1,21 @@
-- name: check dphys-swapfile status
+- name: Checks dphys-swapfile status
+  args:
+    chdir: /etc
   changed_when: False
   failed_when: False
-  shell: test -s dphys-swapfile chdir=/etc
+  shell: test -s dphys-swapfile
   register: dphys_stat
-- name: stop dphys-swapfile service
-  shell: dphys-swapfile swapoff
-  when: dphys_stat.rc is defined and dphys_stat.rc == 0
-- name: stop dphys-swapfile service
-  shell: dphys-swapfile uninstall
-  when: dphys_stat.rc is defined and dphys_stat.rc == 0
-- name: stop dphys-swapfile service
-  shell: update-rc.d dphys-swapfile remove
-  when: dphys_stat.rc is defined and dphys_stat.rc == 0
-- name: drop dphys-swapfile configuration
-  shell: rm -f dphys-swapfile chdir=/etc
-  when: dphys_stat.rc is defined and dphys_stat.rc == 0
+- block:
+  - name: Stops dphys-swapfile service
+    shell: dphys-swapfile swapoff
+  - name: Stops dphys-swapfile service
+    shell: dphys-swapfile uninstall
+  - name: Stops dphys-swapfile service
+    shell: update-rc.d dphys-swapfile remove
+  - name: Drops dphys-swapfile configuration
+    args:
+      chdir: /etc
+    shell: rm -f dphys-swapfile
+  when:
+  - dphys_stat.rc is defined
+  - dphys_stat.rc == 0

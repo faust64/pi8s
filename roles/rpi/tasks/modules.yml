@@ -1,0 +1,22 @@
+- name: Adds br_netfilter module
+  lineinfile:
+    dest: /etc/modules
+    line: br_netfilter
+    regexp: ^br_netfilter
+  register: insert_netfilter
+- name: Loads br_netfilter module
+  shell: modprobe br_netfilter
+  when:
+  - insert_netfilter is defined
+  - insert_netfilter is changed
+- name: Adds overlay module
+  lineinfile:
+    dest: /etc/modules
+    line: overlay
+    regexp: ^overlay
+  register: insert_overlay
+- name: Loads overlay module
+  shell: modprobe overlay
+  when:
+  - insert_overlay is defined
+  - insert_overlay is changed

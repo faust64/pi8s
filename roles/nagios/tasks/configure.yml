@@ -1,0 +1,50 @@
+- name: Installs NRPE main configuration
+  notify: Reload nrpe
+  template:
+    dest: /etc/nagios/nrpe.cfg
+    group: root
+    mode: 0644
+    owner: root
+    src: nrpe.j2
+- name: Installs NRPE main probes configuration
+  notify: Reload nrpe
+  template:
+    dest: /etc/nagios/nrpe.d/commons.cfg
+    group: root
+    mode: 0644
+    owner: root
+    src: checks-commons.j2
+- name: Installs NRPE haproxy probes configuration
+  notify: Reload nrpe
+  template:
+    dest: /etc/nagios/nrpe.d/haproxy.cfg
+    group: root
+    mode: 0644
+    owner: root
+    src: checks-haproxy.j2
+  when:
+  - ansible_fqdn in groups['lb'] or ansible_hostname in groups['lb']
+- block:
+  - name: Installs NRPE k8s probes configuration
+    notify: Reload nrpe
+    template:
+      dest: /etc/nagios/nrpe.d/k8s.cfg
+      group: root
+      mode: 0644
+      owner: root
+      src: checks-k8s.j2
+  - name: Install NRPE k8s sudoers configuration
+    template:
+      dest: /etc/sudoers.d/k8s-nagios
+      group: root
+      mode: 0400
+      owner: root
+      src: sudoers-k8s.j2
+  when:
+  - ansible_fqdn in groups['k8s'] or ansible_hostname in groups['k8s']
+- meta: flush_handlers
+- name: Ensures nagios starts on boot
+  service:
+    enabled: yes
+    name: nagios-nrpe-server
+    state: started

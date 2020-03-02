@@ -1,26 +1,63 @@
-- name: set docker insecure registries
-  lineinfile: dest=/etc/default/docker regexp=^DOCKER_OPTS= line='DOCKER_OPTS="--insecure-registry={{ docker_insecure_registries | join(" --insecure-registry=") }}"'
+- name: Sets docker insecure registries
+  lineinfile:
+    dest: /etc/default/docker
+    regexp: ^DOCKER_OPTS=
+    line: "DOCKER_OPTS=\"--insecure-registry={{ docker_insecure_registries | join(' --insecure-registry=') }}\""
   notify: Reload docker
-  when: docker_insecure_registries is defined and docker_insecure_registries != False
-- name: fix docker systemd unit loading default configuration
-  lineinfile: dest=/lib/systemd/system/docker.service regexp=^EnvironmentFile= line="EnvironmentFile=-/etc/default/docker" insertafter=^ExecStart=
+  when:
+  - docker_insecure_registries is defined
+  - docker_insecure_registries != False
+- name: Fixes docker systemd unit loading default configuration
+  lineinfile:
+    dest: /lib/systemd/system/docker.service
+    insertafter: ^ExecStart=
+    line: "EnvironmentFile=-/etc/default/docker"
+    regexp: ^EnvironmentFile=
   register: systemd_env
-- name: fix docker systemd unit passing environment-defined options to dockerd
-  lineinfile: dest=/lib/systemd/system/docker.service regexp=^ExecStart= line='ExecStart=/usr/bin/dockerd $DOCKER_OPTS -H fd://'
+- name: Fixes docker systemd unit passing environment-defined options to dockerd
+  lineinfile:
+    dest: /lib/systemd/system/docker.service
+    line: "ExecStart=/usr/bin/dockerd $DOCKER_OPTS -H fd://"
+    regexp: ^ExecStart=
   register: systemd_start
-- name: reload systemd
+- name: Reloads systemd
   notify: Reload docker
   shell: systemctl daemon-reload
-  when: (systemd_env is defined and systemd_env.changed is defined and systemd_env.changed == True) or (systemd_start is defined and systemd_start.changed is defined and systemd_start.changed == True)
-- name: set docker proxies
-  lineinfile: dest=/etc/default/docker regexp="^export {{ item }}_proxy=" line="export {{ item }}_proxy={{ http_proxy }}"
+  when: >
+    (systemd_env is defined and systemd_env.changed is defined and systemd_env.changed == True)
+    or (systemd_start is defined and systemd_start.changed is defined and systemd_start.changed == True)
+- name: Sets docker proxies
+  lineinfile:
+    dest: /etc/default/docker
+    regexp: "^export {{ item }}_proxy="
+    line: "export {{ item }}_proxy={{ http_proxy }}"
   notify: Reload docker
-  when: http_proxy is defined and http_proxy != False
+  when:
+  - http_proxy is defined
+  - http_proxy != False
   with_items: [ 'http', 'https' ]
-- name: set docker proxy exclusions
-  lineinfile: dest=/etc/default/docker regexp="^export no_proxy=" line="export no_proxy='{{ no_proxy | join(' ') }}'"
+- name: Sets docker proxy exclusions
+  lineinfile:
+    dest: /etc/default/docker
+    regexp: ^export no_proxy=
+    line: "export no_proxy='{{ no_proxy | join(' ') }}'"
   notify: Reload docker
-  when: http_proxy is defined and http_proxy != False and no_proxy is defined and no_proxy != False
+  when:
+  - http_proxy is defined
+  - http_proxy != False
+  - no_proxy is defined
+  - no_proxy != False
+- name: Configures docker using systemd cgroups driver
+  copy:
+    dest: /etc/docker/daemon.json
+    group: root
+    mode: 0644
+    owner: root
+    src: daemon.json
+  notify: Reload docker
 - meta: flush_handlers
-- name: ensure docker starts on boot
-  service: name=docker state=started enabled=yes
+- name: Ensures docker would start on boot
+  service:
+    enabled: yes
+    name: docker
+    state: started

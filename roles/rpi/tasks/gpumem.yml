@@ -1,0 +1,7 @@
+- name: Lowers GPU memory to minimum
+  lineinfile:
+    dest: /boot/config.txt
+    insertafter: "^[all]"
+    line: gpu_mem=16
+    regexp: ^gpu_mem
+  register: reboot_gpumem

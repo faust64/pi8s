@@ -1,0 +1,40 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: csi-metrics
+  name: csi-rbdplugin-provisioner
+  namespace: {{ csi_namespace }}
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8680
+  - name: grpc-metrics
+    port: 8090
+    protocol: TCP
+    targetPort: 8090
+  selector:
+    app: csi-rbdplugin-provisioner
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: csi-metrics
+  name: csi-metrics-rbdplugin
+  namespace: {{ csi_namespace }}
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8680
+  - name: grpc-metrics
+    port: 8090
+    protocol: TCP
+    targetPort: 8090
+  selector:
+    app: csi-rbdplugin

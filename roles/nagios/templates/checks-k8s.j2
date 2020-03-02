@@ -1,0 +1,9 @@
+{% if ansible_hostname in groups['masters'] or ansible_fqdn in groups['masters'] %}
+command[check_etcd]=sudo /usr/lib/nagios/plugins/check_etcd
+{% endif %}
+{% if do_fluentd | default(False) or do_logging | default(False) %}
+command[check_fluentd]=sudo /usr/lib/nagios/plugins/check_fluentd
+{% endif %}
+command[check_oom]=sudo /usr/lib/nagios/plugins/check_oom
+command[check_persistent_volumes_usage]=sudo /usr/lib/nagios/plugins/check_persistent_volumes_usage
+command[check_rogue_containers]=sudo /usr/lib/nagios/plugins/check_rogue_containers

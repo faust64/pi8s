@@ -1,14 +1,47 @@
-- name: install k8s apt key
-  shell: curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - creates=/etc/apt/sources.list.d/k8s.list warn=False
-- name: install k8s sources list
+- name: Installs k8s apt key
+  args:
+    creates: /etc/apt/sources.list.d/k8s.list
+    warn: False
+  shell: curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+- name: Installs k8s sources list
   register: update_cache
-  template: src=sources.j2 dest=/etc/apt/sources.list.d/k8s.list owner=root group=root mode=0644
-- name: update apt cache
-  apt: update_cache=yes
+  template:
+    dest: /etc/apt/sources.list.d/k8s.list
+    group: root
+    mode: 0644
+    owner: root
+    src: sources.j2
+- name: Updates apt cache
+  apt:
+    update_cache: yes
   delay: 10
   retries: 2
-  when: update_cache is defined and update_cache.changed == True
-- name: install kube configuration directory
-  file: dest=/root/.kube state=directory owner=root group=root mode=0750
-- name: install kubectl
-  apt: name=kubeadm state=present
+  when:
+  - update_cache is defined
+  - update_cache is changed
+- name: Installs kube configuration directory
+  file:
+    dest: /root/.kube
+    group: root
+    mode: 0750
+    owner: root
+    state: directory
+- name: Installs kubernetes
+  apt:
+    name:
+    - kubeadm
+    - kubectl
+    - kubelet
+    state: present
+  register: did_install
+- name: Ensures kubelet stopped
+  service:
+    name: kubelet
+    state: stopped
+  when:
+  - did_install is defined
+  - did_install is changed
+- name: Installs kubernetes-cni
+  apt:
+    name: kubernetes-cni
+    state: present

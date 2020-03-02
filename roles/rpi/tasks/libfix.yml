@@ -1,12 +1,25 @@
-- name: check for kernel modules availability
+- name: Checks for kernel modules availability
+  args:
+    chdir: /lib/modules
   changed_when: False
   failed_when: False
   register: kernel_availability
-  shell: "test -d {{ ansible_kernel }} -o -L {{ ansible_kernel }} chdir=/lib/modules"
-- name: get last kernel module available
+  shell: "test -d {{ ansible_kernel }} -o -L {{ ansible_kernel }}"
+- name: Gets the last kernel module available
+  args:
+    chdir: /lib/modules
   register: last_version
-  shell: ls -1 | tail -1 chdir=/lib/modules
-  when: kernel_availability is defined and kernel_availability.rc is defined and kernel_availability.rc != 0
-- name: link most recent kernel module
-  file: src=/lib/modules/{{ last_version.stdout }} dest=/lib/modules/{{ ansible_kernel }} state=link
-  when: last_version is defined and last_version.stdout is defined and last_version.stdout != ""
+  shell: ls -1 | tail -1
+  when:
+  - kernel_availability is defined
+  - kernel_availability.rc is defined
+  - kernel_availability.rc != 0
+- name: Links most recent kernel module
+  file:
+    dest: "/lib/modules/{{ ansible_kernel }}"
+    state: link
+    src: "/lib/modules/{{ last_version.stdout }}"
+  when:
+  - last_version is defined
+  - last_version.stdout is defined
+  - last_version.stdout != ""

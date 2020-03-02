@@ -1,0 +1,13 @@
+- name: Installs Metrics-server base assets
+  args:
+    chdir: /usr/src/metrics-server
+  shell: "kubectl apply -f {{ item }}.yaml"
+  when: >
+    (templates_assets is defined and templates_assets is changed)
+    or (static_assets is defined and static_assets is changed)
+  with_items:
+  - sa
+  - rbac
+  - apiservice
+  - deploy
+  - svc

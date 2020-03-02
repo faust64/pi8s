@@ -1,0 +1,7 @@
+k8s_apps_domain: apps.demo.local
+openssl_tmp_pass: secr3t
+traefik_le_email: admin@demo.local
+traefik_le_storage: /path/to/acme.json
+traefik_namespace: kube-ingress
+traefik_use_letsencrypt: False
+traefik_version: v2.1

@@ -1,0 +1,34 @@
+- name: Installs init script
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: yes
+  template:
+    dest: /root/bootstrap.sh
+    group: root
+    mode: 0700
+    owner: root
+    src: pre-init.j2
+- name: Installs post script
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: yes
+  template:
+    dest: /root/scale-master-services.sh
+    group: root
+    mode: 0700
+    owner: root
+    src: post-init.j2
+- name: Prepares kubeadm configuration and etcd assets
+  args:
+    chdir: /root
+    creates: /root/bootstrap.log
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  environment:
+    PATH: "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:/root"
+  run_once: yes
+  shell: "bootstrap.sh >bootstrap.log 2>&1"
+- name: Pre-pull images on initial master
+  args:
+    chdir: /root
+    creates: /root/init-output
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: yes
+  shell: "kubeadm config --config=./kubeadmcfg.yaml images pull -v3"

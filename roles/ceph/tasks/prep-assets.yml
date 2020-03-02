@@ -1,0 +1,31 @@
+- name: Prepares Ceph CSI assets directory
+  file:
+    dest: /usr/src/ceph-csi
+    group: root
+    mode: 0755
+    owner: root
+    state: directory
+- name: Fetches Ceph CSI base assets
+  register: assets
+  template:
+    dest: "/usr/src/ceph-csi/{{ item }}.yaml"
+    group: root
+    mode: 0644
+    owner: root
+    src: "{{ item }}.yaml.j2"
+  with_items:
+  - cephfs-deploy
+  - cephfs-ds
+  - cephfs-rbac
+  - cephfs-sa
+  - cephfs-sc
+  - cephfs-secret
+  - cephfs-svc
+  - ceph-deploy
+  - ceph-ds
+  - ceph-rbac
+  - ceph-sa
+  - ceph-sc
+  - ceph-secret
+  - ceph-svc
+  - cm

@@ -1,0 +1,3 @@
+command[check_haproxy_k8s_api]=/usr/lib/nagios/plugins/check_tcp -H {{ ansible_default_ipv4['address'] }} -p 6443
+command[check_haproxy_k8s_routers_http]=/usr/lib/nagios/plugins/check_tcp -H {{ ansible_default_ipv4['address'] }} -p 80
+command[check_haproxy_k8s_routers_https]=/usr/lib/nagios/plugins/check_tcp -H {{ ansible_default_ipv4['address'] }} -p 443

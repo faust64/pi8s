@@ -1,0 +1,39 @@
+container_runtime: docker
+
+do_ceph_rbd: True
+csi_authx_rbd_userid: kube
+csi_authx_rbd_userkey: AQAfJNhcAQRvExAAX6Jx0i+pIPu1ooq9fjGgDw==
+
+#do_ceph_fs: True
+csi_authx_cephfs_adminid: admin
+csi_authx_cephfs_adminkey: AQCAINhcIrU0ABAA93cYVcpCf6kcZy0Z4KjvbQ==
+csi_authx_cephfs_userid: "{{ csi_authx_rbd_userid }}"
+csi_authx_cephfs_userkey: "{{ csi_authx_rbd_userkey }}"
+
+csi_ceph_clusterid: f980b615-746a-4e5e-b429-a364fd69838b
+csi_ceph_mons:
+- 10.42.253.110
+- 10.42.253.111
+- 10.42.253.112
+
+docker_insecure_registries:
+- docker-registry.apps.intra.unetresgrossebite.com
+
+flannel_node_cidr_ids:
+  calliope.friends.intra.unetresgrossebite.com: 0
+  clio.friends.intra.unetresgrossebite.com: 1
+  erato.friends.intra.unetresgrossebite.com: 2
+  pandore.friends.intra.unetresgrossebite.com: 3
+  epimethee.friends.intra.unetresgrossebite.com: 4
+  pyrrha.friends.intra.unetresgrossebite.com: 5
+  euterpe.friends.intra.unetresgrossebite.com: 6
+  melpomene.friends.intra.unetresgrossebite.com: 7
+  polyhymnia.friends.intra.unetresgrossebite.com: 8
+  terpsichore.friends.intra.unetresgrossebite.com: 9
+  thalia.friends.intra.unetresgrossebite.com: 10
+  urania.friends.intra.unetresgrossebite.com: 11
+flannel_node_cidr_length: 24
+
+#stretch or buster does not seem to provide with arm packages
+#whereas xenial does ...
+force_k8s_dist: xenial

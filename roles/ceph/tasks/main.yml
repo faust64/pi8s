@@ -1,0 +1,15 @@
+- include_tasks: prep-assets.yml
+- include_tasks: prep-k8s.yml
+- include_tasks: rbd-install.yml
+  when:
+  - do_ceph_rbd != False
+  - csi_authx_rbd_userkey != False
+  - csi_ceph_clusterid != False
+  - csi_ceph_mons | length > 0
+- include_tasks: cephfs-install.yml
+  when:
+  - do_ceph_fs != False
+  - csi_authx_cephfs_adminkey != False
+  - csi_authx_cephfs_userkey != False
+  - csi_ceph_clusterid != False
+  - csi_ceph_mons | length > 0

@@ -1,8 +1,14 @@
-- name: check wether the remote host hostkey is trusted
+- name: Checks wether the remote host hostkey is trusted
+  args:
+    chdir: /root/.ssh
   changed_when: False
   ignore_errors: yes
   register: ssh_known_host_result
-  shell: ssh-keygen -f known_hosts -F {{ remote }} chdir=/root/.ssh
-- name: trust our remote host hostkey
-  shell: ssh-keyscan -H -t ed25519,ecdsa,rsa -p {{ ssh_port | default('22') }} -T 10 {{ remote }} >>known_hosts chdir=/root/.ssh
-  when: ssh_known_host_result is defined and ssh_known_host_result|failed
+  shell: "ssh-keygen -f known_hosts -F {{ remote }}"
+- name: Trusts our remote host hostkey
+  args:
+    chdir: /root/.ssh
+  shell: "ssh-keyscan -H -t ed25519,ecdsa,rsa -p {{ ssh_port | default('22') }} -T 10 {{ remote }} >>known_hosts"
+  when:
+  - ssh_known_host_result is defined
+  - ssh_known_host_result is failed

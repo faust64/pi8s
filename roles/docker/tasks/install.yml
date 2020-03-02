@@ -1,6 +1,12 @@
-- name: install apt preferences
-  copy: src=prefs dest=/etc/apt/preferences.d/docker owner=root group=root mode=0644
 - name: install docker
-  shell: curl -sSL get.docker.com | sh creates=/usr/bin/docker warn=False
+  args:
+    creates: /usr/bin/docker
+    warn: False
+  shell: curl -sSL get.docker.com | sh
 - name: ensure docker installed
-  apt: name=docker-ce state=present
+  apt:
+    name:
+    - containerd.io
+    - docker-ce
+    - docker-ce-cli
+    state: present

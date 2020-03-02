@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: metrics-server
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+      name: metrics-server
+    spec:
+      containers:
+      - args:
+        - --cert-dir=/tmp
+        - --kubelet-insecure-tls
+        - --kubelet-preferred-address-types=InternalIP
+        - --secure-port=4443
+        image: {{ metrics_server_image }}:{{ metrics_server_version }}
+        imagePullPolicy: IfNotPresent
+        name: metrics-server
+        ports:
+        - name: main-port
+          containerPort: 4443
+          protocol: TCP
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - name: tmp-dir
+          mountPath: /tmp
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        kubernetes.io/arch: arm
+      serviceAccountName: metrics-server
+      volumes:
+      - emptyDir: {}
+        name: tmp-dir

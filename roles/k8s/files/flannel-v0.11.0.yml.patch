@@ -1,0 +1,110 @@
+--- flannel-v0.11.0.yml	2020-03-01 12:43:05.049031405 +0100
++++ flannel-v0.11.0.yml	2020-03-01 12:20:07.000000000 +0100
+@@ -55,6 +55,7 @@
+   cni-conf.json: |
+     {
+       "name": "cbr0",
++      "cniVersion": "0.3.1",
+       "plugins": [
+         {
+           "type": "flannel",
+@@ -79,7 +80,7 @@
+       }
+     }
+ ---
+-apiVersion: extensions/v1beta1
++apiVersion: apps/v1
+ kind: DaemonSet
+ metadata:
+   name: kube-flannel-ds-amd64
+@@ -88,6 +89,10 @@
+     tier: node
+     app: flannel
+ spec:
++  selector:
++    matchLabels:
++      tier: node
++      app: flannel
+   template:
+     metadata:
+       labels:
+@@ -157,7 +162,7 @@
+           configMap:
+             name: kube-flannel-cfg
+ ---
+-apiVersion: extensions/v1beta1
++apiVersion: apps/v1
+ kind: DaemonSet
+ metadata:
+   name: kube-flannel-ds-arm64
+@@ -166,6 +171,10 @@
+     tier: node
+     app: flannel
+ spec:
++  selector:
++    matchLabels:
++      tier: node
++      app: flannel
+   template:
+     metadata:
+       labels:
+@@ -235,7 +244,7 @@
+           configMap:
+             name: kube-flannel-cfg
+ ---
+-apiVersion: extensions/v1beta1
++apiVersion: apps/v1
+ kind: DaemonSet
+ metadata:
+   name: kube-flannel-ds-arm
+@@ -244,6 +253,10 @@
+     tier: node
+     app: flannel
+ spec:
++  selector:
++    matchLabels:
++      tier: node
++      app: flannel
+   template:
+     metadata:
+       labels:
+@@ -313,7 +326,7 @@
+           configMap:
+             name: kube-flannel-cfg
+ ---
+-apiVersion: extensions/v1beta1
++apiVersion: apps/v1
+ kind: DaemonSet
+ metadata:
+   name: kube-flannel-ds-ppc64le
+@@ -322,6 +335,10 @@
+     tier: node
+     app: flannel
+ spec:
++  selector:
++    matchLabels:
++      tier: node
++      app: flannel
+   template:
+     metadata:
+       labels:
+@@ -391,7 +408,7 @@
+           configMap:
+             name: kube-flannel-cfg
+ ---
+-apiVersion: extensions/v1beta1
++apiVersion: apps/v1
+ kind: DaemonSet
+ metadata:
+   name: kube-flannel-ds-s390x
+@@ -400,6 +417,10 @@
+     tier: node
+     app: flannel
+ spec:
++  selector:
++    matchLabels:
++      tier: node
++      app: flannel
+   template:
+     metadata:
+       labels:

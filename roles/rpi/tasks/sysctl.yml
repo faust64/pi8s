@@ -1,0 +1,15 @@
+- name: Installs k8 sysctl configuration
+  copy:
+    dest: /etc/sysctl.d/k8s-rpi.conf
+    group: root
+    mode: 0644
+    owner: root
+    src: sysctl.conf
+  register: conf_changed
+- name: Reloads sysctl configuration
+  args:
+    chdir: /etc/sysctl.d
+  shell: "while read line; do sysctl -w $line; done <k8s-rpi.conf"
+  when:
+  - conf_changed is defined
+  - conf_changed is changed

@@ -1,0 +1,73 @@
+#!/bin/sh
+
+set -ex
+
+###
+export API_HOSTNAME={{ k8s_api_hostname }}
+export API_PORT={{ k8s_api_port }}
+{% for h in groups['masters'] %}
+MAXIDX={{ loop.index }}
+export HOST{{ loop.index }}={{ hostvars[h]['ansible_default_ipv4']['address'] }}
+export NAME{{ loop.index }}={{ h }}
+export SNAME{{ loop.index }}=`echo {{ h }} | cut -d. -f1`
+mkdir -p /tmp/$HOST{{ loop.index }}/
+INITIAL_CLUSTER="{% if loop.index > 1 %}$INITIAL_CLUSTER,{% endif %}$SNAME{{ loop.index }}=https://$HOST{{ loop.index }}:2380"
+{% endfor %}
+{% if k8s_cni == 'flannel' %}
+export POD_SUBNET={{ k8s_overlay_cidr }}
+{% endif %}
+###
+
+if test -z "$MAXIDX"; then
+    echo invalid inventory >&2
+    exit 42
+fi
+
+for i in $(seq 1 $MAXIDX)
+do
+    eval HOST=\$HOST$i
+    eval SNAME=\$SNAME$i
+    cat << EOF >/tmp/$HOST/kubeadmcfg.yaml
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+controlPlaneEndpoint: $API_HOSTNAME:$API_PORT
+etcd:
+  local:
+    serverCertSANs:
+    - "${HOST}"
+    peerCertSANs:
+    - "${HOST}"
+    extraArgs:
+      initial-cluster: $INITIAL_CLUSTER
+      initial-cluster-state: new
+      name: $SNAME
+      listen-peer-urls: https://$HOST:2380
+      listen-client-urls: https://$HOST:2379
+      advertise-client-urls: https://$HOST:2379
+      initial-advertise-peer-urls: https://$HOST:2380
+{% if k8s_cni == 'flannel' %}
+networking:
+  podSubnet: $POD_SUBNET
+{% endif %}
+EOF
+done
+
+kubeadm init phase certs etcd-ca
+{% for h in groups['masters'] %}
+{% if loop.index > 1 %}
+kubeadm init phase certs etcd-server --config=/tmp/$HOST{{ loop.index }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-peer --config=/tmp/$HOST{{ loop.index }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-healthcheck-client --config=/tmp/$HOST{{ loop.index }}/kubeadmcfg.yaml
+kubeadm init phase certs apiserver-etcd-client --config=/tmp/$HOST{{ loop.index }}/kubeadmcfg.yaml
+scp -p /tmp/$HOST{{ loop.index }}/kubeadmcfg.yaml $NAME{{ loop.index }}:
+scp -rp /etc/kubernetes/pki $NAME{{ loop.index }}:/etc/kubernetes/
+find /etc/kubernetes/pki -not -name ca.crt -not -name ca.key -type f -delete
+ssh $NAME{{ loop.index }} -- kubeadm init phase etcd local --config /root/kubeadmcfg.yaml
+{% endif %}
+{% endfor %}
+kubeadm init phase certs etcd-server --config=/tmp/$HOST1/kubeadmcfg.yaml
+kubeadm init phase certs etcd-peer --config=/tmp/$HOST1/kubeadmcfg.yaml
+kubeadm init phase certs etcd-healthcheck-client --config=/tmp/$HOST1/kubeadmcfg.yaml
+kubeadm init phase certs apiserver-etcd-client --config=/tmp/$HOST1/kubeadmcfg.yaml
+cp -p /tmp/$HOST1/kubeadmcfg.yaml /root/
+kubeadm init phase etcd local --config /root/kubeadmcfg.yaml

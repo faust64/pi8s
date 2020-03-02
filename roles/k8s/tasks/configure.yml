@@ -1,0 +1,30 @@
+- name: Installs kubelet defaults
+  template:
+    dest: /etc/default/kubelet
+    group: root
+    mode: 0644
+    owner: root
+    src: kubelet-defaults.j2
+  register: systemd_conf1
+- name: Fixes permissions on kubelet service unit
+  file:
+    dest: /lib/systemd/system/kubelet.service
+    group: root
+    mode: 0644
+    owner: root
+    state: file
+  register: systemd_conf2
+- name: Fixes permissions on kubeadm service unit configuration
+  file:
+    dest: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+    group: root
+    mode: 0644
+    owner: root
+    state: file
+  register: systemd_conf3
+- name: Reloads systemd
+  shell: systemctl daemon-reload
+  when: >
+    (systemd_conf1 is defined and systemd_conf1 is changed)
+    or (systemd_conf2 is defined and systemd_conf2 is changed)
+    or (systemd_conf3 is defined and systemd_conf3 is changed)

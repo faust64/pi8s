@@ -1,0 +1,4 @@
+- name: Applies custom labels
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  shell: "echo kubectl label node {{ ansible_hostname }} {{ item }} --overwrite=true >>/tmp/setlabels"
+  with_items: "{{ k8s_labels }}"

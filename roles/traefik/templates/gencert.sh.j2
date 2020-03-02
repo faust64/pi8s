@@ -1,0 +1,53 @@
+#!/bin/sh
+
+APPS_DOMAIN={{ k8s_apps_domain }}
+TMPPASS="{{ openssl_tmp_pass }}"
+WDIR=/usr/src/traefik
+
+if ! test -s "$WDIR/openssl.cnf"; then
+    cp -p /etc/ssl/openssl.cnf "$WDIR/"
+    cat <<EOF >>"$WDIR/openssl.cnf"
+[ SAN ]
+subjectAltName = DNS:*.$APPS_DOMAIN,DNS:$APPS_DOMAIN
+
+[ v3_req ]
+subjectAltName = DNS:*.$APPS_DOMAIN,DNS:$APPS_DOMAIN
+EOF
+fi
+
+for f in ca.crt ca.key
+do
+    if ! test -s "$WDIR/$f"; then
+	cp -p /etc/kubernetes/pki/$f "$WDIR/"
+    fi
+done
+
+if ! test -s "$WDIR/ingress.nopass.key"; then
+    openssl genrsa -aes256 -passout "pass:$TMPPASS" \
+	-out "$WDIR/ingress.key" 2048
+    openssl rsa -in "$WDIR/ingress.key" -passin "pass:$TMPPASS" \
+	-out "$WDIR/ingress.nopass.key"
+fi
+if ! test -s "$WDIR/ingress.csr"; then
+    openssl req -new -sha256 -reqexts SAN \
+	-key "$WDIR/ingress.nopass.key" \
+	-out "$WDIR/ingress.csr" \
+	-subj "/CN=$APPS_DOMAIN" -extensions SAN \
+	-config "$WDIR/openssl.cnf"
+fi
+if ! test -s "$WDIR/ingress.crt"; then
+    if ! test -s "$WDIR/ca.srl"; then
+	openssl x509 -req -extensions v3_req -days 740 -sha256 \
+	    -extfile "$WDIR/openssl.cnf" -CAkey "$WDIR/ca.key" \
+	    -in "$WDIR/ingress.csr" -CA "$WDIR/ca.crt" \
+	    -out "$WDIR/ingress.crt" -CAcreateserial
+    else
+	openssl x509 -req -extensions v3_req -days 740 -sha256 \
+	    -extfile "$WDIR/openssl.cnf" -CAkey "$WDIR/ca.key" \
+	    -in "$WDIR/ingress.csr" -CA "$WDIR/ca.crt" \
+	    -out "$WDIR/ingress.crt"
+    fi
+fi
+
+cp -p "$WDIR/ingress.nopass.key" "$WDIR/tls.key"
+cat "$WDIR/ingress.crt" "$WDIR/ca.crt" >"$WDIR/tls.crt"

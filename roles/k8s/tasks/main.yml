@@ -1,2 +1,12 @@
 - include_tasks: install.yml
+- include_tasks: configure.yml
+- include_tasks: preinit.yml
 - include_tasks: init.yml
+- include_tasks: cni-flannel.yml
+  when: k8s_cni == 'flannel'
+- include_tasks: cni-weave.yml
+  when: k8s_cni == 'weave'
+- include_tasks: join.yml
+- include_tasks: label.yml
+  when:
+  - k8s_labels | length > 0

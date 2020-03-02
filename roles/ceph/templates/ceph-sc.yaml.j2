@@ -1,0 +1,28 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+{% if csi_rbd_is_default %}
+  annotations:
+    storageclass.beta.kubernetes.io/is-default-class: "true"
+{% endif %}
+  name: ceph-storage
+{% if csi_rbd_mountoptions | length == 0 %}
+mountOptions: []
+{% else %}
+mountOptions:
+{% for opt in csi_rbd_mountoptions %}
+- {{ opt }}
+{% endfor %}
+{% endif %}
+parameters:
+  clusterID: {{ csi_ceph_clusterid }}
+  csi.storage.k8s.io/fstype: {{ csi_rbd_fstype }}
+  csi.storage.k8s.io/node-stage-secret-name: csi-rbd-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: {{ csi_namespace }}
+  csi.storage.k8s.io/provisioner-secret-name: csi-rbd-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ csi_namespace }}
+  imageFeatures: layering
+  pool: {{ csi_rbd_pool }}
+provisioner: rbd.csi.ceph.com
+reclaimPolicy: {{ csi_rbd_reclaimpolicy | default(csi_ceph_reclaimpolicy | default('Delete')) }}
+volumeBindingMode: {{ csi_rbd_volumebindingmode | default(csi_ceph_volumebindingmode | default('Immediate')) }}

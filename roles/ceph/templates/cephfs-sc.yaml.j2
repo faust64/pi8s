@@ -1,0 +1,29 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+{% if csi_cephfs_is_default %}
+{% if (do_ceph_rbd | default(True)) == False or (csi_rbd_is_default | default(True)) == False %}
+  annotations:
+    storageclass.beta.kubernetes.io/is-default-class: "true"
+{% endif %}
+{% endif %}
+  name: cephfs-storage
+{% if csi_cephfs_mountoptions | length == 0 %}
+mountOptions: []
+{% else %}
+mountOptions:
+{% for opt in csi_cephfs_mountoptions %}
+- {{ opt }}
+{% endfor %}
+{% endif %}
+parameters:
+  clusterID: {{ csi_ceph_clusterid }}
+  csi.storage.k8s.io/node-stage-secret-name: csi-cephfs-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: {{ csi_namespace }}
+  csi.storage.k8s.io/provisioner-secret-name: csi-cephfs-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: {{ csi_namespace }}
+  fsName: cephfs
+  pool: {{ csi_cephfs_pool }}
+provisioner: cephfs.csi.ceph.com
+reclaimPolicy: {{ csi_cephfs_reclaimpolicy | default(csi_ceph_reclaimpolicy | default('Delete')) }}
+volumeBindingMode: {{ csi_cephfs_volumebindingmode | default(csi_ceph_volumebindingmode | default('Immediate')) }}

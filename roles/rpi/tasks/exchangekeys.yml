@@ -1,10 +1,14 @@
-- name: get local host key
+- name: Gets local host key
+  args:
+    chdir: /root/.ssh
   changed_when: False
   register: ssh_public_key
-  shell: cat id_rsa.pub chdir=/root/.ssh
-- name: exchange ssh keys between k8s nodes
-  authorized_key: user={{ ansible_user | default('root') }} key={{ item[0] }}
+  shell: cat id_rsa.pub
+- name: Exchanges ssh keys between k8s nodes
+  authorized_key:
+    key: "{{ item[0] }}"
+    user: "{{ ansible_user | default('root') }}"
   delegate_to: "{{ item[1] }}"
   with_nested:
-    - "{{ ssh_public_key.stdout }}"
-    - "{{ groups['k8s'] }}"
+  - "{{ ssh_public_key.stdout }}"
+  - "{{ groups['k8s'] }}"

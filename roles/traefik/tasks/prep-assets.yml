@@ -1,0 +1,33 @@
+- name: Prepares Traefik assets directory
+  file:
+    dest: /usr/src/traefik
+    group: root
+    mode: 0755
+    owner: root
+    state: directory
+- name: Fetches Traefik base assets
+  copy:
+    dest: "/usr/src/traefik/{{ item }}"
+    group: root
+    mode: 0644
+    owner: root
+    src: "{{ item }}"
+  register: static_assets
+  with_items:
+  - crd.yaml
+- name: Fetches Traefik base assets
+  register: templates_assets
+  template:
+    dest: "/usr/src/traefik/{{ item }}"
+    group: root
+    mode: "{{ 0750 if (item == 'gencert.sh') else 0644 }}"
+    owner: root
+    src: "{{ item }}.j2"
+  with_items:
+  - cm.yaml
+  - deploy.yaml
+  - gencert.sh
+  - rbac.yaml
+  - sa.yaml
+  - svc.yaml
+  - tlsoption.yaml

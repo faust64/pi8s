@@ -1,0 +1,74 @@
+global
+    maxconn     20000
+    log		/dev/log local0
+    log		/dev/log local1 notice
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    user        haproxy
+    group       haproxy
+    daemon
+    stats socket /var/lib/haproxy/stats mode 660 level admin expose-fd listeners
+
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          300s
+    timeout server          300s
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 20000
+
+listen stats
+    bind :9000
+    mode http
+    stats enable
+    stats uri /
+
+frontend k8s-api
+    bind *:6443
+    default_backend k8s-api
+    mode tcp
+    option tcplog
+
+backend k8s-api
+    balance source
+    mode tcp
+{% for h in groups['masters'] %}
+    server      master{{ loop.index }} {{ hostvars[h]['ansible_default_ipv4']['address'] }}:{{ k8s_api_port }} check
+{% endfor %}
+{% if do_apps | default(True) %}
+
+frontend apps-tls
+    bind *:443
+    default_backend apps-tls
+    mode tcp
+    option tcplog
+
+backend apps-tls
+    balance source
+    mode tcp
+{% for h in groups['infra'] %}
+    server      router{{ loop.index }} {{ hostvars[h]['ansible_default_ipv4']['address'] }}:443 check
+{% endfor %}
+
+frontend apps-clear
+    bind *:80
+    default_backend apps-clear
+    mode tcp
+    option tcplog
+
+backend apps-clear
+    balance source
+    mode tcp
+{% for h in groups['infra'] %}
+    server      router{{ loop.index }} {{ hostvars[h]['ansible_default_ipv4']['address'] }}:80 check
+{% endfor %}
+{% endif %}

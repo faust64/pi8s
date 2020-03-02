@@ -1,0 +1,16 @@
+- name: Looks for cgroups boot options
+  args:
+    chdir: /boot
+  changed_when: False
+  failed_when: False
+  register: has_cgroups
+  shell: grep cgroup_enable=memory cmdline.txt >/dev/null
+- name: Enables memory control group subsystem
+  register: reboot_cgroups
+  replace:
+    path: /boot/cmdline.txt
+    regexp: '(rootwait)$'
+    replace: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
+  when:
+  - has_cgroups is defined
+  - has_cgroups is failed

@@ -1,0 +1,121 @@
+#!/bin/sh
+
+API_HOSTNAME={{ k8s_api_hostname }}
+MASTERS="{{ groups['masters'] | join(' ') }}"
+SDNIPADDR=10.96.0.1 #FIXME: retrieve from k8s api
+TMPPASS="{{ openssl_tmp_pass }}"
+WDIR=/root/pki-working-dir
+
+if ! test -d "$WDIR"; then
+    cp -rp /etc/kubernetes/pki "$WDIR"
+fi
+
+sapi=`echo "$API_HOSTNAME" | cut -d. -f1`
+for host in $MASTERS
+do
+    if test "`echo "$host" | cut -d. -f2`"; then
+	sname=`echo $host | cut -d. -f1`
+    else
+	sname=$host
+    fi
+    IPADDR=`getent hosts $sname | awk '{print $1;exit 0;}'`
+    if ! test -s "$WDIR/openssl-$sname.cnf"; then
+	cat <<EOF >"$WDIR/openssl-$sname.cnf"
+[ req ]
+default_bits		= 2048
+default_md		= sha256
+default_keyfile 	= privkey.pem
+distinguished_name	= req_distinguished_name
+attributes		= req_attributes
+req_extensions = v3_req
+x509_extensions	= v3_ca
+
+[ req_distinguished_name ]
+countryName			= Country Name (2 letter code)
+countryName_min			= 2
+countryName_max			= 2
+stateOrProvinceName		= State or Province Name (full name)
+localityName			= Locality Name (eg, city)
+0.organizationName		= Organization Name (eg, company)
+organizationalUnitName		= Organizational Unit Name (eg, section)
+commonName			= Common Name (eg, fully qualified host name)
+commonName_max			= 64
+emailAddress			= Email Address
+emailAddress_max		= 64
+
+[ req_attributes ]
+challengePassword		= A challenge password
+challengePassword_min		= 4
+challengePassword_max		= 20
+
+[ SAN ]
+subjectAltName = DNS:$sapi,DNS:$API_HOSTNAME,DNS:$sname,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local,DNS:kube-apiserver,IP:$SDNIPADDR,IP:$IPADDR
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = DNS:$sapi,DNS:$API_HOSTNAME,DNS:$sname,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local,DNS:kube-apiserver,IP:$SDNIPADDR,IP:$IPADDR
+
+[ v3_ca ]
+
+[ CA_default ]
+copy_extensions = copy
+EOF
+    fi
+    if ! test -s "$WDIR/${sname}-apiserver.nopass.key"; then
+	openssl genrsa -aes256 -passout "pass:$TMPPASS" \
+	    -out "$WDIR/${sname}-apiserver.key" 2048
+	openssl rsa -in "$WDIR/${sname}-apiserver.key" -passin "pass:$TMPPASS" \
+	    -out "$WDIR/${sname}-apiserver.nopass.key"
+    fi
+    if ! test -s "$WDIR/${sname}-apiserver.csr"; then
+	openssl req -new -sha256 -reqexts SAN \
+	    -key "$WDIR/${sname}-apiserver.nopass.key" \
+	    -out "$WDIR/${sname}-apiserver.csr" \
+	    -subj "/CN=kube-apiserver" -extensions SAN \
+	    -config "$WDIR/openssl-${sname}.cnf"
+    fi
+    if ! test -s "$WDIR/${sname}-apiserver.crt"; then
+	if ! test -s "$WDIR/ca.srl"; then
+	    openssl x509 -req -extensions v3_req -days 740 -sha256 \
+		-extfile "$WDIR/openssl-${sname}.cnf" -CAkey "$WDIR/ca.key" \
+		-in "$WDIR/${sname}-apiserver.csr" -CA "$WDIR/ca.crt" \
+		-out "$WDIR/${sname}-apiserver.crt" -CAcreateserial
+	else
+	    openssl x509 -req -extensions v3_req -days 740 -sha256 \
+		-extfile "$WDIR/openssl-${sname}.cnf" -CAkey "$WDIR/ca.key" \
+		-in "$WDIR/${sname}-apiserver.csr" -CA "$WDIR/ca.crt" \
+		-out "$WDIR/${sname}-apiserver.crt"
+	fi
+    fi
+done
+{% for h in groups['masters'] %}
+
+# master{{ loop.index }}
+{% if loop.index == 1 %}
+replaces={{ hostvars[h]['ansible_default_ipv4']['address'] }}
+{% else %}
+sname=`echo {{ h }} | cut -d. -f1`
+address={{ hostvars[h]['ansible_default_ipv4']['address'] }}
+scp -rp /etc/kubernetes/pki/front-proxy-* /etc/kubernetes/pki/sa.* \
+    /etc/kubernetes/pki/apiserver-kubelet-* \
+    {{ hostvars[h]['ansible_default_ipv4']['address'] }}:/etc/kubernetes/pki/
+scp -p /etc/kubernetes/admin.conf /etc/kubernetes/controller-manager.conf \
+    /etc/kubernetes/scheduler.conf \
+    {{ hostvars[h]['ansible_default_ipv4']['address'] }}:/etc/kubernetes/
+scp -p /etc/kubernetes/manifests/kube-controller-manager.yaml \
+    /etc/kubernetes/manifests/kube-scheduler.yaml \
+    {{ hostvars[h]['ansible_default_ipv4']['address'] }}:/etc/kubernetes/manifests/
+sed -e "s|$replaces|$address|g" \
+    -e "s|--etcd-servers=.*|--etcd-servers=https://$address:2379|" \
+    /etc/kubernetes/manifests/kube-apiserver.yaml \
+    >/root/${sname}-apiserver.yaml
+scp -p /root/${sname}-apiserver.yaml \
+    $address:/etc/kubernetes/manifests/kube-apiserver.yaml
+scp -p /root/pki-working-dir/${sname}-apiserver.crt \
+    $address:/etc/kubernetes/pki/apiserver.crt
+scp -p /root/pki-working-dir/${sname}-apiserver.nopass.key \
+    $address:/etc/kubernetes/pki/apiserver.key
+ssh $address systemctl restart kubelet
+{% endif %}
+{% endfor %}

@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cephfs-csi-nodeplugin
+  namespace: {{ csi_namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cephfs-csi-provisioner
+  namespace: {{ csi_namespace }}

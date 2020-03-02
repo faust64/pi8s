@@ -1,6 +1,16 @@
 ansible_user: root
-k8s_init_node: pandore.faust.intra.unetresgrossebite.com
-#stretch does not seem to provide with raspbian packages
-#whereas xenial does ...
-force_k8s_dist: xenial
+
+#http_proxy=http://1.2.3.4:3128
+#no_proxy=[ '*.example.com', '10/8' ]
+
+nagios_allowed_hosts:
+- 127.0.0.1
+- 10.42.242.200
+- 10.42.242.202
+- 10.42.242.203
+
+k8s_api_hostname: k8s-api.intra.unetresgrossebite.com
+k8s_apps_domain: router.intra.unetresgrossebite.com
+k8s_cni: flannel
+k8s_init_token_ttl: 0
 k8s_overlay_cidr: 10.128.0.0/12

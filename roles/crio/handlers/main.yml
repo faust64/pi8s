@@ -1,0 +1,4 @@
+- name: Reload crio
+  service:
+    name: cri-o
+    state: restarted

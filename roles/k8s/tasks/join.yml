@@ -1,0 +1,130 @@
+- name: Gets join command
+  args:
+    chdir: /root
+  changed_when: False
+  register: k8s_join_command
+  shell: "grep -A10 'kubeadm join' k8s-init | sed 's|\\\\||'"
+- block:
+  - name: Pre-pull images on masters
+    args:
+      chdir: /root
+      creates: /root/init-output
+    register: should_join
+    shell: "kubeadm config --config=./kubeadmcfg.yaml images pull -v3"
+  - name: FIXME
+    fail:
+      msg: >
+        WARNING etcd cluster setup remains does not work
+         => on non-initial master nodes, in /etc/kubernetes/manifests/etcd.yaml,
+               change initial-cluster-state from new to existing
+         => on initial master node, in /etc/kubernetes/manifests/etcd.yaml, make
+               sure initial-cluster includes the address for the nodes we want to join
+         => then, run the join command on our new master node
+            "{{ (k8s_join_command.stdout_lines | default([])) | join(' ') }}" \
+                --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests \
+                >init-output 2>&1
+         => restart etcd on initial master node. api would break. connect to etcd
+             (docker exec -it xxx /bin/sh), and run the following
+            etcdctl --cert /etc/kubernetes/pki/etcd/peer.crt --key \
+               /etc/kubernetes/pki/etcd/peer.key --cacert \
+               /etc/kubernetes/pki/etcd/ca.crt --endpoints \
+               https://{{ groups['masters'][0] }}:2379/ member add \
+               <member-hostname> --peer-urls=https://<new-node-address>:2380
+         => wait for API to recover, then proceed with third etcd member / shouldn't break
+    when:
+    - should_join is defined
+    - should_join is changed
+  - name: Joins master nodes to cluster
+    args:
+      chdir: /root
+      creates: /root/init-output
+    register: master_joined
+    shell: "{{ (k8s_join_command.stdout_lines | default([])) | join(' ') }} --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests >init-output 2>&1"
+    when:
+    - k8s_join_command is defined
+    - k8s_join_command.stdout is defined
+    - k8s_join_command != ""
+  - block:
+    - name: Allocates podCIDR to master node
+      args:
+        creates: /usr/src/flannel.yml
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl patch node {{ ansible_hostname }} -p '{\"spec\": {\"podCIDR\": \"{{ node_cidr }}\"} }' --type merge"
+      when:
+      - k8s_cni == 'flannel'
+      - flannel_node_cidr_ids is defined
+      - flannel_node_cidr_ids[ansible_fqdn] is defined
+    - name: Labels master node
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl label node {{ ansible_hostname }} node-role.kubernetes.io/master="
+    - name: "Lets kubelet startup - waits for {{ k8s_join_timeout }} seconds"
+      run_once: yes
+      wait_for:
+        timeout: "{{ k8s_join_timeout }}"
+    - name: Allocates podCIDR to master node
+      args:
+        creates: /usr/src/flannel.yml
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl patch node {{ ansible_hostname }} -p '{\"spec\": {\"podCIDR\": \"{{ node_cidr }}\"} }' --type merge"
+      when:
+      - k8s_cni == 'flannel'
+      - flannel_node_cidr_ids is defined
+      - flannel_node_cidr_ids[ansible_fqdn] is defined
+    when:
+    - master_joined is defined
+    - master_joined is changed
+  when: >
+    ansible_fqdn in groups['masters']
+    or ansible_hostname in groups['masters']
+- block:
+  - name: Joins nodes to cluster
+    args:
+      chdir: /root
+      creates: /root/init-output
+    register: worker_joined
+    shell: "{{ (k8s_join_command.stdout_lines | default([])) | join(' ') }} >init-output 2>&1"
+    when:
+    - k8s_join_command is defined
+    - k8s_join_command.stdout is defined
+    - k8s_join_command != ""
+  - block:
+    - name: Allocates podCIDR to node
+      args:
+        creates: /usr/src/flannel.yml
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl patch node {{ ansible_hostname }} -p '{\"spec\": {\"podCIDR\": \"{{ node_cidr }}\"} }' --type merge"
+      when:
+      - k8s_cni == 'flannel'
+      - flannel_node_cidr_ids is defined
+      - flannel_node_cidr_ids[ansible_fqdn] is defined
+    - name: Labels infra node
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl label node {{ ansible_hostname }} node-role.kubernetes.io/infra="
+      when: >
+        ansible_fqdn in groups['infra']
+        or ansible_hostname in groups['infra']
+    - name: Labels workers node
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl label node {{ ansible_hostname }} node-role.kubernetes.io/workers="
+      when: >
+        ansible_fqdn in groups['workers']
+        or ansible_hostname in groups['workers']
+    - name: "Lets kubelet startup - waits for {{ k8s_join_timeout }} seconds"
+      run_once: yes
+      wait_for:
+        timeout: "{{ k8s_join_timeout }}"
+    - name: Allocates podCIDR to node
+      args:
+        creates: /usr/src/flannel.yml
+      delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+      shell: "kubectl patch node {{ ansible_hostname }} -p '{\"spec\": {\"podCIDR\": \"{{ node_cidr }}\"} }' --type merge"
+      when:
+      - k8s_cni == 'flannel'
+      - flannel_node_cidr_ids is defined
+      - flannel_node_cidr_ids[ansible_fqdn] is defined
+    when:
+    - worker_joined is defined
+    - worker_joined is changed
+  when:
+  - not (ansible_fqdn in groups['masters'])
+  - not (ansible_hostname in groups['masters'])

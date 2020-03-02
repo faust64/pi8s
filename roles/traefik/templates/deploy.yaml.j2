@@ -1,0 +1,99 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: {{ traefik_namespace }}
+  name: traefik
+  labels:
+    app: traefik
+spec:
+  replicas: {{ groups['infra'] | length }}
+  selector:
+    matchLabels:
+      app: traefik
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values: [ traefik ]
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - --api.insecure
+        - --accesslog
+        - --entrypoints.web.Address=:80
+        - --entrypoints.websecure.Address=:443
+        - --providers.kubernetescrd
+{% if traefik_use_letsencrypt %}
+        - --certificatesresolvers.myresolver.acme.tlschallenge
+        - --certificatesresolvers.myresolver.acme.email={{ traefik_le_email }}
+        - --certificatesresolvers.myresolver.acme.storage={{ traefik_le_storage }}
+#FIXME: requires PVC to be created/attached
+# or CM, or secret, .. if we don't have RWX, ...
+{% else %}
+        - --providers.file.directory=/config/
+{% endif %}
+        image: traefik:{{ traefik_version }}
+        name: traefik
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+{% if not traefik_use_letsencrypt %}
+        volumeMounts:
+        - mountPath: /config
+          name: config
+        - mountPath: /secret
+          name: tls
+{% endif %}
+      hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""
+      serviceAccount: traefik-ingress-controller
+      serviceAccountName: traefik-ingress-controller
+{% if not traefik_use_letsencrypt %}
+      volumes:
+      - configMap:
+          name: traefik
+        name: config
+      - name: tls
+        secret:
+          secretName: traefik
+{% endif %}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: {{ traefik_namespace }}
+  name: whoami
+  labels:
+    app: whoami
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - name: whoami
+        image: containous/whoami
+        ports:
+        - name: web
+          containerPort: 80
+      nodeSelector:
+        node-role.kubernetes.io/infra: ""

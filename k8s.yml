@@ -1,5 +1,41 @@
+- hosts: lb:k8s
+  roles:
+  - rpi
+- hosts: lb
+  pre_tasks:
+  - name: Gather facts from k8s hosts
+    delegate_facts: True
+    delegate_to: "{{ item }}"
+    setup:
+    when:
+    - hostvars[item]['ansible_default_ipv4'] is not defined
+    with_items: "{{ groups['k8s'] }}"
+  roles:
+  - haproxy
+  vars:
+    do_apps: False
 - hosts: k8s
   roles:
-    - rpi
-    - docker
-    - k8s
+  - container
+  - k8s
+- hosts: masters[0]
+  roles:
+  - { role: traefik, when: k8s_apps_domain | default(False) }
+  - { role: metrics, when: do_metrics | default(False) }
+  - { role: ceph, when: (do_ceph_rbd | default(True) or do_ceph_fs | default(False)) }
+- hosts: lb
+  pre_tasks:
+  - name: Gather facts from k8s hosts
+    delegate_facts: True
+    delegate_to: "{{ item }}"
+    setup:
+    when:
+    - hostvars[item]['ansible_default_ipv4'] is not defined
+    with_items: "{{ groups['k8s'] }}"
+  roles:
+  - haproxy
+  when:
+  - k8s_apps_domain | default(False)
+- hosts: all
+  roles:
+  - nagios

@@ -1,0 +1,10 @@
+- name: Checks for existing namespace
+  changed_when: False
+  failed_when: False
+  register: has_ns
+  shell: "kubectl describe ns {{ csi_namespace }}"
+- name: Creates Ceph CSI namespace
+  shell: "kubectl create ns {{ csi_namespace }}"
+  when:
+  - has_ns is defined
+  - (has_ns.rc | default(0)) != 0

@@ -1,0 +1,18 @@
+- name: Installs NRPE server
+  apt:
+    name:
+    - monitoring-plugins-basic
+    - nagios-nrpe-server
+    - nagios-plugins-contrib
+    state: present
+- name: Installs custom probes
+  copy:
+    dest: /usr/lib/nagios/plugins/
+    group: root
+    mode: 0755
+    owner: root
+    src: plugins/
+- name: Purges package defaults
+  file:
+    dest: /etc/nagios/nrpe_local.cfg
+    state: absent

@@ -1,0 +1,22 @@
+- name: Checks CephFS CSI storageclass
+  changed_when: False
+  failed_when: False
+  register: has_cephfs
+  shell: kubectl describe sc cephfs-storage
+- name: Installs CephFS CSI base assets
+  args:
+    chdir: /usr/src/ceph-csi
+  shell: "kubectl apply -f {{ item }}.yaml"
+  when: >
+    (assets is defined and assets is changed)
+    or (has_cephfs is defined and
+        (has_cephfs.rc | default(0)) != 0)
+  with_items:
+  - cm
+  - cephfs-sa
+  - cephfs-secret
+  - cephfs-rbac
+  - cephfs-svc
+  - cephfs-deploy
+  - cephfs-ds
+  - cephfs-sc

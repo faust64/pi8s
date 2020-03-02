@@ -1,0 +1,150 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-cephfsplugin-provisioner
+  namespace: {{ csi_namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: csi-cephfsplugin-provisioner
+  replicas: {{ groups['infra'] | length }}
+  template:
+    metadata:
+      labels:
+        app: csi-cephfsplugin-provisioner
+    spec:
+      containers:
+      - args:
+        - "--csi-address=$(ADDRESS)"
+        - "--v=5"
+        - "--timeout=150s"
+        - "--enable-leader-election=true"
+        - "--leader-election-type=leases"
+        - "--retry-interval-start=500ms"
+        env:
+        - name: ADDRESS
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_provisioner_image }}:{{ csi_provisioner_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-provisioner
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--csi-address=$(ADDRESS)"
+        - "--v=5"
+        - "--csiTimeout=150s"
+        - "leader-election"
+        env:
+        - name: ADDRESS
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_resize_image }}:{{ csi_resize_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-resizer
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--v=5"
+        - "--csi-address=$(ADDRESS)"
+        - "leader-election=true"
+        env:
+        - name: ADDRESS
+          value: /csi/csi-provisioner.sock
+        image: {{ csi_attacher_image }}:{{ csi_attacher_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-cephfsplugin-attacher
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      - args:
+        - "--nodeid=$(NODE_ID)"
+        - "--type=cephfs"
+        - "--controllerserver=true"
+        - "--endpoint=$(CSI_ENDPOINT)"
+        - "--v=5"
+        - "--drivername=cephfs.csi.ceph.com"
+        - "--metadatastorage=k8s_configmap"
+        - "--pidlimit=-1"
+        - "--metricsport=8091"
+        - "--metricspath=/metrics"
+        - "--enablegrpcmetrics=false"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi-provisioner.sock
+        image: {{ csi_ceph_image }}:{{ csi_ceph_version }}
+        imagePullPolicy: IfNotPresent
+        name: csi-cephfsplugin
+        securityContext:
+          capabilities:
+            add:
+            - SYS_ADMIN
+          privileged: true
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+        - name: host-sys
+          mountPath: /sys
+        - name: lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: host-dev
+          mountPath: /dev
+        - name: ceph-csi-config
+          mountPath: /etc/ceph-csi-config/
+        - name: keys-tmp-dir
+          mountPath: /tmp/csi/keys
+      - args:
+        - "--type=liveness"
+        - "--endpoint=$(CSI_ENDPOINT)"
+        - "--metricsport=8681"
+        - "--metricspath=/metrics"
+        - "--polltime=60s"
+        - "--timeout=3s"
+        env:
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi-provisioner.sock
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        image: {{ csi_ceph_image }}:{{ csi_ceph_version }}
+        imagePullPolicy: IfNotPresent
+        name: liveness-prometheus
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi
+      serviceAccount: cephfs-csi-provisioner
+      volumes:
+      - name: socket-dir
+        hostPath:
+          path: /var/lib/kubelet/plugins/cephfs.csi.ceph.com
+          type: DirectoryOrCreate
+      - name: host-sys
+        hostPath:
+          path: /sys
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: host-dev
+        hostPath:
+          path: /dev
+      - name: ceph-csi-config
+        configMap:
+          name: ceph-csi-config
+      - name: keys-tmp-dir
+        emptyDir:
+          medium: Memory

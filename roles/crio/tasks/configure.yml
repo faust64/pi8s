@@ -1,0 +1,40 @@
+- name: Fixes crio configuration
+  notify: Reload crio
+  lineinfile:
+    line: "conmon = \"/usr/bin/conmon\""
+    regex: "conmon = .*"
+- name: Installs registries configuration
+  copy:
+    dest: /etc/containers/registries.conf
+    group: root
+    mode: 0644
+    owner: root
+    src: registries.conf
+  notify: Reload crio
+- name: Sets crio proxies
+  lineinfile:
+    dest: /etc/default/cri-o
+    regexp: "^export {{ item }}_proxy="
+    line: "export {{ item }}_proxy={{ http_proxy }}"
+  notify: Reload crio
+  when:
+  - http_proxy is defined
+  - http_proxy != False
+  with_items: [ 'http', 'https' ]
+- name: Sets crio proxy exclusions
+  lineinfile:
+    dest: /etc/default/cri-o
+    regexp: ^export no_proxy=
+    line: "export no_proxy='{{ no_proxy | join(' ') }}'"
+  notify: Reload crio
+  when:
+  - http_proxy is defined
+  - http_proxy != False
+  - no_proxy is defined
+  - no_proxy != False
+- meta: flush_handlers
+- name: Ensures crio starts on boot
+  service:
+    enabled: yes
+    name: cri-o
+    state: started

@@ -1,0 +1,30 @@
+- name: Prepares Metrics-server assets directory
+  file:
+    dest: /usr/src/metrics-server
+    group: root
+    mode: 0755
+    owner: root
+    state: directory
+- name: Fetches Metrics-server base assets
+  copy:
+    dest: "/usr/src/metrics-server/{{ item }}"
+    group: root
+    mode: 0644
+    owner: root
+    src: "{{ item }}"
+  register: static_assets
+  with_items:
+  - apiservice.yaml
+  - rbac.yaml
+  - sa.yaml
+  - svc.yaml
+- name: Fetches Metrics-server base assets
+  register: templates_assets
+  template:
+    dest: "/usr/src/metrics-server/{{ item }}"
+    group: root
+    mode: 0644
+    owner: root
+    src: "{{ item }}.j2"
+  with_items:
+  - deploy.yaml

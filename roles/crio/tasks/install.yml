@@ -1,0 +1,21 @@
+- name: Installs cri-o GPG key
+  args:
+    creates: /etc/apt/sources.list.d/crio.list
+  shell: "curl -sL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x8BECF1637AD8C79D' | apt-key add -"
+- name: Installs cri-o source
+  file:
+    dest: /etc/apt/sources.list.d/crio.list
+    group: root
+    mode: 0644
+    owner: root
+    src: crio.list
+  register: repo_installed
+- name: Updates apt cache
+  apt: update_cache=yes
+  when:
+  - repo_installed is defined
+  - repo_installed is changed
+- name: Ensures cri-o installed
+  apt:
+    name: cri-o-1.15
+    state: present

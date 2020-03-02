@@ -1,0 +1,15 @@
+- name: Generates Traefik self-signed certificate
+  args:
+    chdir: /usr/src/traefik
+    creates: /usr/src/traefik/tls.crt
+  environment:
+    PATH: "/bin:/usr/bin:/usr/local/bin:/usr/src/traefik"
+  shell: gencert.sh
+- name: Installs traefik secret
+  args:
+    chdir: /usr/src/traefik
+  shell: "kubectl create secret generic -n {{ traefik_namespace }} traefik --from-file=tls.crt=tls.crt --from-file=tls.key=tls.key"
+  when:
+  - has_secret is defined
+  - has_secret.rc is defined
+  - has_secret.rc != 0

@@ -1,0 +1,9 @@
+- name: Reboots nodes
+  block:
+  - shell: ( sleep 2 && reboot ) &
+  - wait_for_connection:
+      delay: 10
+  when: >
+    (reboot_cgroups is defined and reboot_cgroups is changed)
+    or (reboot_upgrade is defined and reboot_upgrade is changed)
+    or (reboot_gpumem is defined and reboot_gpumem is changed)

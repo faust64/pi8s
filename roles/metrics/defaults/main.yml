@@ -1,0 +1,2 @@
+metrics_server_image: docker.io/sqeven/metrics-server-arm
+metrics_server_version: v0.3.6

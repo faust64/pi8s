@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ traefik_namespace }}
+  name: traefik
+data:
+  tls.toml: |
+    [[tls.certificates]]
+       certFile = "/secret/tls.crt"
+       keyFile  = "/secret/tls.key"
+    [tls.stores]
+      [tls.stores.default]
+         [tls.stores.default.defaultCertificate] 
+           certFile = "/secret/tls.crt"
+           keyFile  = "/secret/tls.key"

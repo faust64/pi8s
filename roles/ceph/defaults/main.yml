@@ -1,0 +1,32 @@
+do_ceph_fs: False
+do_ceph_rbd: True
+csi_attacher_image: docker.io/taichikageyama/csi-attacher
+csi_attacher_version: v2.0.0-arm
+csi_authx_cephfs_adminid: admin
+csi_authx_cephfs_adminkey: False
+csi_authx_cephfs_userid: kube
+csi_authx_cephfs_userkey: False
+csi_authx_rbd_userid: kube
+csi_authx_rbd_userkey: False
+csi_ceph_clusterid: False
+csi_ceph_image: docker.io/taichikageyama/csi-ceph
+csi_ceph_mons: []
+csi_ceph_version: v1.2.2-arm
+csi_cephfs_is_default: False
+csi_cephfs_mountoptions:
+- debug
+csi_cephfs_pool: cephfs_data
+csi_namespace: kube-csi
+csi_node_driver_registrar_image: docker.io/taichikageyama/csi-node-driver-registrar
+csi_node_driver_registrar_version: v1.2.0-arm
+csi_provisioner_image: docker.io/taichikageyama/csi-provisioner
+csi_provisioner_version: v1.4.0-arm
+csi_rbd_fstype:  xfs
+csi_rbd_is_default: True
+csi_rbd_mountoptions:
+- discard
+csi_rbd_pool: kube
+csi_resize_image: docker.io/pyletime/csi-resizer-arm
+csi_resize_version: v0.4.0
+csi_snapshotter_image: docker.io/taichikageyama/csi-snapshotter
+csi_snapshotter_version: v1.2.2-arm

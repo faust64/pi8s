@@ -1,0 +1,27 @@
+- name: Gets k8s version
+  args:
+    creates: /usr/src/weave.yml
+  changed_when: False
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  register: k8s_version
+  run_once: True
+  shell: kubectl version | base64 | tr -d '\n'
+- name: Downloads weave network driver
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: True
+  register: weave_fetched
+  get_url:
+    dest: /usr/src/weave.yml
+    group: root
+    mode: 0644
+    owner: root
+    url: "https://cloud.weave.works/k8s/net?k8s-version={{ k8s_version.stdout }}&env.IPALLOC_RANGE={{ k8s_overlay_cidr }}"
+- name: Installs weave network driver
+  args:
+    chdir: /usr/src
+  delegate_to: "{{ k8s_init_node | default(groups['masters'][0]) }}"
+  run_once: True
+  shell: kubectl apply -f weave.yml
+  when:
+  - weave_fetched is defined
+  - weave_fetched is changed

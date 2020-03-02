@@ -1,0 +1,22 @@
+- name: Installs haproxy main configuration
+  notify: Reload haproxy
+  template:
+    dest: /etc/haproxy/haproxy.cfg
+    force: "{{ 'yes' if (do_apps | default(True)) else 'no' }}"
+    group: root
+    mode: 0644
+    owner: root
+    src: haproxy.j2
+- name: Installs hatop profile configuration
+  copy:
+    dest: /etc/profile.d/hatop.sh
+    group: root
+    mode: 0644
+    owner: root
+    src: profile.sh
+- meta: flush_handlers
+- name: Ensures haproxy would start on boot
+  service:
+    enabled: yes
+    name: haproxy
+    state: started

@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: csi-metrics
+  name: csi-cephfsplugin-provisioner
+  namespace: {{ csi_namespace }}
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8681
+  - name: grpc-metrics
+    port: 8090
+    protocol: TCP
+    targetPort: 8091
+  selector:
+    app: csi-cephfsplugin-provisioner
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: csi-metrics
+  name: csi-metrics-cephfsplugin
+  namespace: {{ csi_namespace }}
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8681
+  - name: grpc-metrics
+    port: 8090
+    protocol: TCP
+    targetPort: 8091
+  selector:
+    app: csi-cephfsplugin

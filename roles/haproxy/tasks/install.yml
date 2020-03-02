@@ -1,0 +1,6 @@
+- name: Installs haproxy
+  apt:
+    name:
+    - haproxy
+    - hatop
+    state: present
