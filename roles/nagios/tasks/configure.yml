@@ -14,6 +14,13 @@
     mode: 0644
     owner: root
     src: checks-commons.j2
+- name: Install NRPE main sudoers configuration
+  copy:
+    dest: /etc/sudoers.d/commons-nagios
+    group: root
+    mode: 0400
+    owner: root
+    src: sudoers-commons
 - name: Installs NRPE haproxy probes configuration
   notify: Reload nrpe
   template:

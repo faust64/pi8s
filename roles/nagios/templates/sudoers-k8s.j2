@@ -1,4 +1,4 @@
-Defaults:nrpe !requiretty
+Defaults:nagios !requiretty
 {% if ansible_hostname in groups['masters'] or ansible_fqdn in groups['masters'] %}
 nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_etcd
 {% endif %}

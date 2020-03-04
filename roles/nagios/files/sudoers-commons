@@ -1,0 +1,2 @@
+Defaults:nagios !requiretty
+nagios ALL=(ALL) NOPASSWD: /usr/lib/nagios/plugins/check_certificates
