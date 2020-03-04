@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: testpod
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: testpod
+  template:
+    metadata:
+      labels:
+        name: testpod
+    spec:
+      containers:
+      - args:
+        - /bin/sh
+        - -c
+        - sleep 86400
+        image: docker.io/hypriot/armhf-busybox:latest
+        imagePullPolicy: IfNotPresent
+        name: debug
