@@ -1,4 +1,5 @@
 container_runtime: docker
+flannel_nat_hack: False
 flannel_node_cidr_ids: []
 flannel_node_cidr_length: 24
 flannel_version: v0.11.0

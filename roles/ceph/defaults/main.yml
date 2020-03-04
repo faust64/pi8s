@@ -21,7 +21,7 @@ csi_node_driver_registrar_image: docker.io/taichikageyama/csi-node-driver-regist
 csi_node_driver_registrar_version: v1.2.0-arm
 csi_provisioner_image: docker.io/taichikageyama/csi-provisioner
 csi_provisioner_version: v1.4.0-arm
-csi_rbd_fstype:  xfs
+csi_rbd_fstype: ext4
 csi_rbd_is_default: True
 csi_rbd_mountoptions:
 - discard

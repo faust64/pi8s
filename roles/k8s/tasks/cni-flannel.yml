@@ -66,3 +66,18 @@
   when:
   - k8s_version is defined
   - k8s_version.stdout_line is defined
+- name: Installs flannel nat-hack script
+  copy:
+    dest: /usr/local/sbin/flannel-nat-hack
+    group: root
+    mode: 0700
+    owner: root
+    src: flannel-wtf.sh
+- name: Schedules flannel nat-hack
+  cron:
+    job: "/usr/local/sbin/flannel-nat-hack >/dev/null 2>&1"
+    minute: "*/5"
+    name: Ensures SDN traffic gets NAT-ed leaving cluster
+    state: "{{ 'present' if (flannel_nat_hack | default(False))
+                         else 'absent' }}"
+    user: root

@@ -19,6 +19,7 @@ csi_ceph_mons:
 docker_insecure_registries:
 - docker-registry.apps.intra.unetresgrossebite.com
 
+flannel_nat_hack: True
 flannel_node_cidr_ids:
   calliope.friends.intra.unetresgrossebite.com: 0
   clio.friends.intra.unetresgrossebite.com: 1
