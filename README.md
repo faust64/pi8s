@@ -4,6 +4,10 @@ Set of Ansible roles deploying k8s on RPI.
 
 Last tested with raspbian buster 10.3, k8s 1.17.3, on armv7l/v8l.
 
+NOTICE: better look into https://github.com/kubernetes-sigs/kubespray,
+if you want some production-ready cluster. RPI is perfectly supported.
+The playbook given here is mainly a kubernetes-from-scratch exercise.
+
 ## Configuration
 
 Set proper hostnames, enable SSH, install python-apt.
@@ -59,9 +63,9 @@ CPU quotas. On raspbian, we should expect those sysctls [to be missing](https://
 
 Docker also complains about those, yet shows it as a warning and still starts
 containers - whereas I could not start etcd, initializing my first master with
-Crio. A workaround may be to build your own kernel. Wait for a fix. Note I
-haven't tried the cgroupfs driver. Testing docker, I did use the systemd driver
-as well.
+cri-o. A workaround may be to build your own kernel. Or prefer the cgroupfs
+driver -- which, using Raspbian, would require enablig memory cgroups (in
+/boot/cmdline.txt).
 
 ### Docker Pool
 
